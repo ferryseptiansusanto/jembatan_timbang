@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1024</width>
+    <height>768</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <widget class="QStackedWidget" name="stackedContent">
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <widget class="QWidget" name="page"/>
+      <widget class="QWidget" name="page_2"/>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1024</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionUser_Setting"/>
+    <addaction name="actionLog_Off"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuMaster">
+    <property name="title">
+     <string>Master</string>
+    </property>
+    <addaction name="actionMaster_Barang"/>
+    <addaction name="actionMaster_Customer"/>
+    <addaction name="actionMaster_Supplier"/>
+    <addaction name="separator"/>
+    <addaction name="actionData_Perusahaan"/>
+   </widget>
+   <widget class="QMenu" name="menuTransaksi">
+    <property name="title">
+     <string>Transaksi</string>
+    </property>
+    <addaction name="actionTimbang_Barang_2"/>
+    <addaction name="separator"/>
+    <addaction name="actionPrint_Ulang_Tiket"/>
+   </widget>
+   <widget class="QMenu" name="menuLaporan">
+    <property name="title">
+     <string>Laporan</string>
+    </property>
+    <addaction name="actionLaporan_Supplier"/>
+    <addaction name="actionLaporan_Customer"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionPort_Setting"/>
+    <addaction name="actionBackup_Data"/>
+    <addaction name="actionRestore_Data"/>
+    <addaction name="actionPrint_Layout"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuMaster"/>
+   <addaction name="menuTransaksi"/>
+   <addaction name="menuLaporan"/>
+   <addaction name="menuTools"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionUser_Setting">
+   <property name="text">
+    <string>User Setting</string>
+   </property>
+  </action>
+  <action name="actionLog_Off">
+   <property name="text">
+    <string>Log Off</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionMaster_Barang">
+   <property name="text">
+    <string>Master Barang</string>
+   </property>
+  </action>
+  <action name="actionMaster_Customer">
+   <property name="text">
+    <string>Master Customer</string>
+   </property>
+  </action>
+  <action name="actionMaster_Supplier">
+   <property name="text">
+    <string>Master Supplier</string>
+   </property>
+  </action>
+  <action name="actionData_Perusahaan">
+   <property name="text">
+    <string>Data Perusahaan</string>
+   </property>
+  </action>
+  <action name="actionTicket_Customer">
+   <property name="text">
+    <string>Tiket Customer</string>
+   </property>
+  </action>
+  <action name="actionTiket_Supplier">
+   <property name="text">
+    <string>Tiket Supplier</string>
+   </property>
+  </action>
+  <action name="actionTiket_Supplier_2">
+   <property name="text">
+    <string>Tiket Supplier</string>
+   </property>
+  </action>
+  <action name="actionTiket_Customer">
+   <property name="text">
+    <string>Tiket Customer</string>
+   </property>
+  </action>
+  <action name="actionTimbang_Barang_2">
+   <property name="text">
+    <string>Timbang Barang</string>
+   </property>
+  </action>
+  <action name="actionTiket_Supplier_3">
+   <property name="text">
+    <string>Tiket Supplier</string>
+   </property>
+  </action>
+  <action name="actionTiket_Customer_2">
+   <property name="text">
+    <string>Tiket Customer</string>
+   </property>
+  </action>
+  <action name="actionLaporan_Supplier">
+   <property name="text">
+    <string>Laporan Supplier</string>
+   </property>
+  </action>
+  <action name="actionLaporan_Customer">
+   <property name="text">
+    <string>Laporan Customer</string>
+   </property>
+  </action>
+  <action name="actionPort_Setting">
+   <property name="text">
+    <string>Port Setting</string>
+   </property>
+  </action>
+  <action name="actionBackup_Data">
+   <property name="text">
+    <string>Backup Data</string>
+   </property>
+  </action>
+  <action name="actionRestore_Data">
+   <property name="text">
+    <string>Restore Data</string>
+   </property>
+  </action>
+  <action name="actionPrint_Ulang_Tiket">
+   <property name="text">
+    <string>Print Ulang Tiket</string>
+   </property>
+  </action>
+  <action name="actionPrint_Layout">
+   <property name="text">
+    <string>Print Layout</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

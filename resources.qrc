@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="Icons">
+    <file>resources/icon/data-transformation.png</file>
+    <file>resources/icon/refresh-icon-10846.png</file>
+  </qresource>
+</RCC>

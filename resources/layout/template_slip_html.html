@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+
+        @media print {
+            @page {
+                size: 105mm;
+                margin: 5mm;
+            }
+        }
+        .section {
+            margin-bottom: 8px;
+        }
+
+        body {
+            width: 105mm;
+            font-family: "Courier New", monospace;
+            font-size: 11pt;
+            margin: 20px 20px;
+            color: #000;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .footer {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;       /* Pastikan semua mulai sejajar dari atas */
+            gap: 80px;                     /* Jarak antar tanda tangan */
+        }
+
+        .signature-block {
+            width: 150px;
+            text-align: center;
+        }
+
+        .title {
+            font-weight: bold;
+            font-size: 10pt;
+            margin-bottom: 40px;           /* Jarak kosong untuk lokasi tanda tangan */
+        }
+
+        .signature-line {
+            border-top: 1px solid #000;
+            margin_top: 4px;
+            padding-top: 4px;
+            font-size: 10pt;
+        }
+        .note {
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        .info-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 10pt;
+        }
+
+        .label {
+            width: 80px;
+            text-align: right;
+            padding-right: 8px;
+        }
+
+        .info-table td {
+            padding: 4px 6px;
+        }
+        .label {
+            width: 120px;
+            text-align: right;
+            padding-right: 6px;
+        }
+
+      td {
+          padding: 3px 6px;
+      }
+
+
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <strong>PT. {{nama_perusahaan}}</strong><br>
+        {{alamat}}<br>
+        Telp: {{telepon}}
+    </div>
+
+    <table class="info-table">
+      <tr><td class="label">No Tiket</td><td>:</td><td>{{no_tiket}}</td></tr>
+      <tr><td class="label">Supplier</td><td>:</td><td>{{supplier}}</td></tr>
+      <tr><td class="label">Barang</td><td>:</td><td>{{barang}}</td></tr>
+      <tr><td class="label">No Polisi</td><td>:</td><td>{{no_polisi}}</td></tr>
+      <tr><td class="label">No PO/DO</td><td>:</td><td>{{no_do}}</td></tr>
+      <tr><td class="label">Tanggal Masuk</td><td>:</td><td>{{tanggal_masuk}}</td></tr>
+      <tr><td class="label">Tanggal Keluar</td><td>:</td><td>{{tanggal_keluar}}</td></tr>
+      <tr><td class="label">Gross</td><td>:</td><td>{{gross}} Kg</td></tr>
+      <tr><td class="label">Tare</td><td>:</td><td>{{tare}} Kg</td></tr>
+      <tr><td class="label">Netto</td><td>:</td><td>{{netto}} Kg</td></tr>
+
+    </table>
+
+
+    <div class="footer">
+        <div class="signature-block">
+            <div class="title">Sopir</div>
+            <div class="signature-line">( {{nama_sopir}} )</div>
+        </div>
+        <div class="signature-block">
+            <div class="title">Admin</div>
+            <div class="signature-line">( {{user}} )</div>
+        </div>
+    </div>
+
+    <div class="note">Keterangan: {{keterangan}}</div>
+</body>
+</html>
