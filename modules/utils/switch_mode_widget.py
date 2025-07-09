@@ -1,8 +1,67 @@
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QApplication, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy
 from PyQt5.QtCore import Qt, QPropertyAnimation, pyqtProperty,pyqtSignal
 from PyQt5.QtGui import QPainter, QColor, QBrush
 
-import sys
+
+class SwitchModeWidget(QWidget):
+    toggled = pyqtSignal(bool)
+
+    def __init__(self, on_text="Aktif", off_text="Nonaktif", start_flag=False, callback=None, parent=None):
+        super().__init__(parent)
+
+        self.on_text = on_text
+        self.off_text = off_text
+        self.callback = callback
+
+        self.label = QLabel()
+        self.switch = SwitchButton()
+        self.switch.setChecked(start_flag)
+
+        self._setup_layout()
+        self._update_label(start_flag)
+
+        self.switch.toggled.connect(self._handle_toggle)
+
+        # Optional: forward signal to external handler
+        if self.callback:
+            self.toggled.connect(self.callback)
+
+    def _setup_layout(self):
+        layout = QHBoxLayout()
+        layout.setContentsMargins(8, 4, 8, 4)
+        layout.setSpacing(10)
+
+        # Atur gaya dan alignment label dulu
+        self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.label.setMinimumWidth(100)
+        # self.label.setStyleSheet("padding-left: 10px; font-weight: bold; font-size: 10pt; color: #000;")
+
+        # Tambahkan ke layout
+        layout.addWidget(self.label)
+        layout.addStretch()
+        layout.addWidget(self.switch)
+
+        self.setLayout(layout)
+
+    def _handle_toggle(self, checked):
+        self._update_label(checked)
+        self.toggled.emit(checked)
+
+    def _update_label(self, checked):
+        self.label.setText(self.on_text if checked else self.off_text)
+
+    def is_checked(self):
+        return self.switch.isChecked()
+
+    def set_checked(self, checked):
+        self.switch.setChecked(checked)
+
+    def set_callback(self, func):
+        self.toggled.disconnect()
+        self.toggled.connect(func)
+
+
 
 class SwitchButton(QWidget):
     toggled = pyqtSignal(bool)
@@ -56,34 +115,3 @@ class SwitchButton(QWidget):
         self.update()
 
     position = pyqtProperty(float, get_position, set_position)
-
-
-class SwitchModeForm(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Form Toggle Mode")
-        self.mode_label = QLabel("Mode Input : Pemasok")
-
-        self.switch = SwitchButton()
-        self.switch.setChecked(False)
-        self.switch.toggled.connect(self.on_toggle_mode)
-
-        layout = QHBoxLayout()
-        layout.addWidget(self.mode_label)
-        layout.addStretch()
-        #layout.addSpacerItem(QSpacerItem(40, 10, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        layout.addWidget(self.switch)
-
-        wrapper = QVBoxLayout()
-        wrapper.addLayout(layout)
-        self.setLayout(wrapper)
-
-    def on_toggle_mode(self, checked):
-        mode = "Pelanggan" if checked else "Pemasok"
-        self.mode_label.setText(f"Mode Input : {mode}")
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = SwitchModeForm()
-    window.show()
-    sys.exit(app.exec_())

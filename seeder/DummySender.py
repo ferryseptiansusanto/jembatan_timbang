@@ -9,12 +9,13 @@ DATA_BITS = 8
 PARITY = "N"
 STOP_BITS = 1
 INTERVAL = 0.2             # Kirim setiap 0.5 detik
+INDICATOR_TYPE = "RAW"  # Pilihan: "D10", "T1", "AND", "A12", "D2002E", "SMART", "RAW"
 
 # === SERIAL SETUP ===
 bytesize_map = {7: serial.SEVENBITS, 8: serial.EIGHTBITS}
 parity_map = {"N": serial.PARITY_NONE, "E": serial.PARITY_EVEN, "O": serial.PARITY_ODD}
 stopbits_map = {1: serial.STOPBITS_ONE, 2: serial.STOPBITS_TWO}
-INDICATOR_TYPE = "A12"  # Pilihan: "D10", "T1", "AND", "A12", "D2002E", "SMART"
+
 
 # === GENERATOR FRAME D10 ===
 def make_d10_frame(weight: float, desimal_pos: int = None) -> bytes:
@@ -26,7 +27,7 @@ def make_d10_frame(weight: float, desimal_pos: int = None) -> bytes:
     posisi = str(desimal_pos) if desimal_pos is not None else random.choice("43210")
     return b'\x02' + value.encode() + posisi.encode() + b'\x03'
 
-
+# === GENERATOR FRAME T1 ===
 def make_t1_frame(value: int) -> bytes:
     """
     value : int dengan maksimal 7 digit
@@ -74,6 +75,18 @@ def make_smart_frame(weight: int) -> bytes:
     str_val = f"{weight:08d}"[:8]       # Format ke 8 digit
     return b'\x02' + str_val.encode()
 
+# === FRAME GENERATOR UNTUK RAW ===
+def make_raw_frame(weight: int) -> bytes:
+    """
+    Format klasik: ST,GS,+xxxxxxxx.xxkg\r\n
+    Panjang tetap: 8 digit termasuk desimal (6 angka + titik + 2 desimal)
+    """
+    # Format berat: 2 digit integer + 2 digit desimal → misalnya 12.34
+    val = f"+{weight:06d}"  # hasil: '+0012.34'
+
+    return f"US,NT,{val}kg\r\n".encode()
+
+
 # === MAIN LOOP ===
 try:
     ser = serial.Serial(
@@ -105,6 +118,10 @@ try:
         elif INDICATOR_TYPE == "SMART":
             berat_int = random.randint(0, 99999999)
             frame = make_smart_frame(berat_int)
+        elif INDICATOR_TYPE == "RAW":
+            berat = random.randint(0, 999999)  # Contoh berat: 12
+           # berat = 123456  # Contoh berat: 12
+            frame = make_raw_frame(berat)
         else:
             frame = b"[UNKNOWN TIMBANGAN]\n"
 

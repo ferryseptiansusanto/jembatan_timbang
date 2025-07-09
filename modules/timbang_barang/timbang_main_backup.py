@@ -1,18 +1,24 @@
 from PyQt5 import QtWidgets
 from .form_timbang import Ui_Form
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
+from customwidgets.switch_mode.switch_mode_form import SwitchButton
+from modules.helper.xmlconfigurator import baca_konfigurasi
+from modules.config.config import BAUDRATES, DATABITS, STOPBITS, PARITY, FLOWCONTROL, map_parity, map_stopbits, \
+    map_bytesize
+from PyQt5.QtCore import Qt, pyqtSignal, QThread, QTimer
+from modules.helper.serialworker import SerialWorker
 from modules.config.config import REGEX_BERAT_TEMPLATE  # ambil mask dari config kamu
 from modules.helper.fontsetup import SetupEdLineFont
 from modules.utils.format_utils import  apply_thousand_separator
-from PyQt5.QtWidgets import QCompleter, QMessageBox
+from PyQt5.QtWidgets import QCompleter
 from modules.helper.db import get_nama_barang_aktif, get_nama_pemasok_pelanggan_aktif, \
-    get_transaksi_by_no_tiket, get_nama_barang_by_id, get_nama_pemasok_pelanggan_id, fetch_transaksi, count_transaksi
+    insert_transaksi_pemasok_pelanggan, is_no_tiket_exist, get_id_pemasok_pelanggan_by_nama, \
+    get_id_barang_by_nama, get_transaksi_by_no_tiket, get_nama_barang_by_id, get_nama_pemasok_pelanggan_id, \
+    update_transaksi_timbang_kedua, fetch_transaksi, count_transaksi
 from modules.helper.report_table_model import ReportTableModel
 from modules.helper.db import get_daftar_no_tiket
 from modules.helper.regex_serial_parser import RegexSerialParser
+from time import time
 from modules.helper.transaction_handler import validasi_transaksi, proses_timbang_masuk, proses_timbang_keluar
-from modules.helper.serial_manager import SerialManager
-from modules.utils.switch_mode_widget import SwitchModeWidget
 
 
 
@@ -89,18 +95,21 @@ class TimbangMain(QtWidgets.QWidget, Ui_Form):
 
     # Init SwitchControl
     def init_switch_controls(self):
+        # Switch Transaksi
+        self.switchTransaksi = SwitchButton()
+        self.switchTransaksi.setChecked(False)
+        self.switchTransaksi.toggled.connect(self.on_toggle_transaksi)
+        self.layoutModeSwitch.layout().addWidget(self.switchTransaksi)
+        self.labelMode.setText("Mode Input : Pemasok")
         self.modeTransaksi = "pemasok"
-        switch_transaksi = SwitchModeWidget( on_text="Pemasok", off_text="Pembeli", start_flag=False,
-            callback=self.on_toggle_transaksi
-        )
-        switch_transaksi.label.setStyleSheet("text-align: left;font-weight: bold; font-size: 10pt; color: #000;padding-left: 4px;")
-        self.layoutModeSwitch.layout().addWidget(switch_transaksi)
 
-        switch_com = SwitchModeWidget( on_text="Port : Open", off_text="Port : Closed", start_flag=False,
-            callback=self.on_toggle_comport
-        )
-        switch_com.label.setStyleSheet("text-align: left;font-weight: bold; font-size: 10pt; color: #000;padding-left: 4px;")
-        self.layoutModeComport.layout().addWidget(switch_com)
+        # Switch COM Port
+        self.switchComPort = SwitchButton()
+        self.switchComPort.setChecked(False)
+        self.switchComPort.toggled.connect(self.on_toggle_comport)
+        self.layoutModeComport.layout().addWidget(self.switchComPort)
+        self.labelModeComport.setText("Com Port : Closed")
+        self.portStatus = "closed"
 
     # Init Signal
     def connect_signals(self):
@@ -108,6 +117,8 @@ class TimbangMain(QtWidgets.QWidget, Ui_Form):
         self.btnClear.clicked.connect(self.reset_timbangan)
         self.btnSave.clicked.connect(self.save_record)
         self.btnLoadTiket.clicked.connect(self.try_load_transaksi_tiket)
+
+        # self.edNoTiket.editingFinished.connect(self.try_load_transaksi_tiket)
 
     # Auto-completion untuk barang, pemasok, pelanggan, notiket
     def init_completer(self):
@@ -117,8 +128,7 @@ class TimbangMain(QtWidgets.QWidget, Ui_Form):
 
     def on_toggle_transaksi(self, checked):
         self.modeTransaksi = "pelanggan" if checked else "pemasok"
-
-        self.lbl_pemasok_pelanggan.setText(self.modeTransaksi.capitalize())
+        self.labelMode.setText(f"Mode Input : {self.modeTransaksi.capitalize()}")
         self.set_tipe_transaksi(self.modeTransaksi)
 
         # Ganti data untuk auto-completer pemasok/pelanggan
@@ -138,19 +148,40 @@ class TimbangMain(QtWidgets.QWidget, Ui_Form):
             self.model_transaksi.set_search_term("")  # Optional: reset pencarian
             self.model_transaksi.reload()
 
-    def handle_com_status(self, port, status):
-        self.com_status_changed.emit(port, True) if status else self.com_status_changed.emit("", False)
-
     def on_toggle_comport(self, checked):
-        if checked:
-            self.serial_manager = SerialManager()
-            self.serial_manager.data_received.connect(self.update_weight_display)
-            self.serial_manager.status_changed.connect(self.handle_com_status)
-            self.serial_manager.start()
-        else:
-            if self.serial_manager:
-                self.serial_manager.stop()
 
+        if checked:
+            config = baca_konfigurasi()
+            if not config:
+                return
+            self.ComPort = config.get("comport", "")
+
+            self.serial_worker = SerialWorker(
+                port=self.ComPort,
+                baudrate=config.get("baudrate", 9600),
+                parity=map_parity(config.get("parity", "N")),
+                stopbits=map_stopbits(config.get("stopbits", 1)),
+                bytesize=map_bytesize(config.get("databits", 8))
+            )
+
+            self.serial_thread = QThread()
+            self.serial_worker.moveToThread(self.serial_thread)
+
+            self.serial_thread.started.connect(self.serial_worker.start)
+            self.serial_worker.data_received.connect(self.update_weight_display)
+            self.serial_worker.finished.connect(self.serial_thread.quit)
+            self.serial_worker.finished.connect(self.serial_worker.deleteLater)
+            self.serial_thread.finished.connect(self.serial_thread.deleteLater)
+
+            self.serial_thread.start()
+            self.labelModeComport.setText("COM Port : Open")
+            self.com_status_changed.emit(self.ComPort, True)  # saat ON
+
+        else:
+            if self.serial_worker:
+                self.serial_worker.stop()
+            self.labelModeComport.setText("COM Port : Closed")
+            self.com_status_changed.emit("", False)  # saat OFF
             self.edCurrentWeight.setText("")
 
     def update_weight_display(self, data):
@@ -168,6 +199,18 @@ class TimbangMain(QtWidgets.QWidget, Ui_Form):
 
     def show_serial_error(self, message):
         QtWidgets.QMessageBox.critical(self, "Serial Error", message)
+
+    def load_record(self):
+        config = baca_konfigurasi()
+        if not config:
+            return
+
+        self.comport = config.get("comport", "")
+        self.baudrate = config.get("baudrate", BAUDRATES[0])
+        self.databits = config.get("databits", DATABITS[0])
+        self.stopbits = config.get("stopbits", STOPBITS[0])
+        self.parity = config.get("parity", PARITY[0])
+        self.flowcontrol = config.get("flowcontrol", FLOWCONTROL[0])
 
     def set_tipe_transaksi(self, mode):
         print(f"Mode transaksi diset ke: {mode}")
@@ -216,35 +259,77 @@ class TimbangMain(QtWidgets.QWidget, Ui_Form):
 
     def simpan_transaksi(self):
         no_tiket = self.edNoTiket.text().strip()
-        error = validasi_transaksi(no_tiket, self.timbang1, self.timbang2)
-        if error:
-            QMessageBox.warning(self, "Validasi", error)
+        if not no_tiket:
+            QtWidgets.QMessageBox.warning(self, "Validasi", "No Tiket wajib diisi.")
             return
 
-        form_data = {
-            'pemasok': self.edPemasok.text().strip(),
-            'barang': self.edNamaBarang.text().strip(),
-            'nopol': self.edNomorPolisi.text().strip(),
-            'nopo': self.edNomorPO.text().strip(),
-            'sopir': self.edNamaSopir.text().strip(),
-            'keterangan': self.txtedKeterangan.toPlainText().strip(),
-            'timbang1': self.timbang1,
-            'timbang2': self.timbang2
-        }
-
-        updated = proses_timbang_keluar(self.modeTransaksi, no_tiket, form_data,
-                                        self.current_user, form_data['keterangan'], self.timbang2)
-        if updated:
-            QMessageBox.information(self, "Berhasil", "Timbang kedua diperbarui.")
+        if self.timbang1 == self.timbang2 and self.timbang1 > 0:
+            QtWidgets.QMessageBox.warning(self, "Validasi Timbang", "Berat timbang 1 dan timbang 2 tidak boleh sama.")
             return
 
-        inserted = proses_timbang_masuk(self.modeTransaksi, no_tiket, form_data, self.current_user)
-        if inserted:
-            QMessageBox.information(self, "Berhasil", "Timbang masuk disimpan.")
-            if self.timbang1 > 0 and self.timbang2 > 0:
-                self.form_readonly_mode(True)
+        existing = get_transaksi_by_no_tiket(self.modeTransaksi, no_tiket)
+
+        nama_pemasok_pelanggan = self.edPemasok.text().strip()
+        nama_barang = self.edNamaBarang.text().strip()
+
+        id_pemasok_pelanggan = get_id_pemasok_pelanggan_by_nama(self.modeTransaksi, nama_pemasok_pelanggan)
+        id_barang = get_id_barang_by_nama(nama_barang)
+
+        if not id_pemasok_pelanggan or not id_barang:
+            QtWidgets.QMessageBox.warning(self, "Validasi", "Pemasok atau Barang tidak ditemukan.")
+            return
+
+        id_field = "id_pemasok" if self.modeTransaksi == "pemasok" else "id_pelanggan"
+        self.gross, self.tare = (self.timbang1, self.timbang2) if self.timbang1 > self.timbang2 else (
+        self.timbang2, self.timbang1)
+        self.is_timbang = 1 if self.timbang1 > 0 and self.timbang2 > 0 else 0
+
+        if existing:
+            if existing[-1] == 1:
+                QtWidgets.QMessageBox.warning(self, "Duplikat",
+                                              f"Transaksi dengan No Tiket '{no_tiket}' sudah selesai.")
+                return
+
+            # ⏩ Update Timbang Kedua
+            data_update = {
+                "gross": self.gross,
+                "tare": self.tare,
+                "netto": self.netto,
+                "tanggal_keluar": int(time()),
+                "keterangan": self.txtedKeterangan.toPlainText().strip(),
+                "operator_timbang_keluar": self.current_user,
+                "timbang2": self.timbang2,
+                "is_timbang": self.is_timbang
+            }
+
+            update_transaksi_timbang_kedua(self.modeTransaksi, no_tiket, data_update)
+            QtWidgets.QMessageBox.information(self, "Berhasil", "Timbang kedua berhasil diperbarui.")
         else:
-            QMessageBox.warning(self, "Validasi", "Pemasok atau Barang tidak ditemukan.")
+            # ➕ Insert Timbang Pertama
+            data_insert = {
+                "no_tiket": no_tiket,
+                "no_polisi": self.edNomorPolisi.text().strip(),
+                "no_po_do": self.edNomorPO.text().strip(),
+                id_field: id_pemasok_pelanggan,
+                "id_barang": id_barang,
+                "nama_sopir": self.edNamaSopir.text().strip(),
+                "gross": self.gross,
+                "tare": self.tare,
+                "netto": self.netto,
+                "tanggal_masuk": int(time()),
+                "keterangan": self.txtedKeterangan.toPlainText().strip(),
+                "operator_timbang_masuk": self.current_user,
+                "is_timbang": self.is_timbang,
+                "timbang1": self.timbang1,
+                "timbang2": self.timbang2
+            }
+
+            insert_transaksi_pemasok_pelanggan(self.modeTransaksi, data_insert)
+            QtWidgets.QMessageBox.information(self, "Berhasil", "Transaksi timbang masuk berhasil disimpan.")
+            if self.is_timbang == 1:
+                self.form_readonly_mode(True)
+
+        #self.reset_timbangan()
 
     def save_record(self):
         self.simpan_transaksi()

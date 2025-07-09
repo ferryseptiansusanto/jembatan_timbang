@@ -14,6 +14,7 @@ class LoginMain(QtWidgets.QWidget, Ui_Form):
         self.connect_signals()
         self.clear_form()
         self.edUsername.setFocus()
+        self.DeveloperMode()
 
     def connect_signals(self):
         self.btnLogin.clicked.connect(self.login)
@@ -46,3 +47,8 @@ class LoginMain(QtWidgets.QWidget, Ui_Form):
             self.close()
         else:
             QtWidgets.QMessageBox.critical(self, "Login Gagal", "Username atau password salah.")
+
+    def DeveloperMode(self):
+        self.edUsername.setText("ferry")
+        self.edPassword.setText("ferry")
+        self.btnLogin.setFocus()

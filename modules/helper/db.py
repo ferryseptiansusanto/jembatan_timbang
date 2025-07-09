@@ -2,8 +2,9 @@
 
 import sqlite3
 from modules.config.config import DB_PATH  # atau atur path langsung di sini
+from modules.helper.konversidatetime import format_ts
 from PyQt5.QtSql import QSqlDatabase
-from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex
+from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QTimer
 
 def open_db_connection():
     return sqlite3.connect(DB_PATH)
@@ -205,181 +206,101 @@ def update_transaksi_timbang_kedua(mode_transaksi, no_tiket, data):
     query = f"UPDATE {tb} SET {fields} WHERE no_tiket = ?"
     execute_query(query, values)
 
-def fetch_transaksi(mode_transaksi, offset, limit, search, sort_col, sort_order):
+def fetch_transaksi(mode_transaksi, offset, limit, search, sort_col, sort_order, date_start=None, date_end=None):
     if mode_transaksi == "pemasok":
         tb = "db_transaksi_pemasok"
         join = "LEFT JOIN db_master_pemasok s ON t.id_pemasok = s.id"
-        supplier_field = "s.nama AS Supplier"
     else:
         tb = "db_transaksi_pelanggan"
         join = "LEFT JOIN db_master_pelanggan s ON t.id_pelanggan = s.id"
-        supplier_field = "s.nama AS Supplier"
 
-    order = "ASC" if sort_order == Qt.AscendingOrder else "DESC"
-    sort_col_map = {
-        0: "no_tiket", 1: "no_polisi", 2: "no_po_do", 3: "nama_sopir",
-        4: "timbang1", 5: "timbang2", 6: "gross", 7: "tare", 8: "netto"
+    sort_map = {
+        0: "t.no_tiket", 1: "t.no_polisi", 2: "t.no_po_do", 3: "s.nama",
+        4: "b.namabarang", 5: "t.nama_sopir", 6: "t.gross",
+        7: "t.tare", 8: "t.netto", 9: "t.tanggal_masuk"
     }
 
-    where = "WHERE is_timbang = 1"
-    if search:
-        where += f" AND (t.no_tiket LIKE '%{search}%' OR t.no_polisi LIKE '%{search}%')"
+    sort_field = sort_map.get(sort_col, "t.tanggal_masuk")
+    direction = "ASC" if sort_order == Qt.AscendingOrder else "DESC"
 
-    sort = f"ORDER BY {sort_col_map.get(sort_col, 'tanggal_masuk')} {order}"
+    where = "WHERE t.is_timbang = 1"
+    where += " AND t.tanggal_masuk >= ? AND t.tanggal_masuk < ?"
+
+    params = []
+    params += [date_start, date_end]
+
+    if search:
+        where += """
+        AND (
+            t.no_tiket LIKE ? OR
+            t.no_polisi LIKE ? OR
+            t.nama_sopir LIKE ? OR
+            b.namabarang LIKE ? OR
+            s.nama LIKE ?
+        )
+        """
+        wild = f"%{search}%"
+        params += [wild] * 5
 
     query = f"""
         SELECT 
-            t.no_tiket, t.no_polisi, t.no_po_do AS 'No DO', t.nama_sopir,
-            t.timbang1, t.timbang2, t.gross, t.tare, t.netto,
-            {supplier_field},
+            t.no_tiket, t.no_polisi, t.no_po_do,
+            s.nama AS Supplier,
             b.namabarang AS Barang,
-            t.tanggal_masuk AS 'Tanggal Masuk',
-            t.tanggal_keluar AS 'Tanggal Keluar',
-            t.keterangan AS Keterangan
+            t.nama_sopir,
+            t.gross, t.tare, t.netto,
+            t.tanggal_masuk, t.tanggal_keluar,
+            t.keterangan
         FROM {tb} t
         LEFT JOIN db_master_barang b ON t.id_barang = b.id
         {join}
         {where}
-        {sort}
-        LIMIT {limit} OFFSET {offset}
+        ORDER BY {sort_field} {direction}
+        LIMIT ? OFFSET ?
     """
-    return execute_select(query)
+    params += [limit, offset]
+    rows = execute_select(query, params)
 
-def count_transaksi(mode_transaksi, search):
-    tb = "db_transaksi_pemasok" if mode_transaksi == "pemasok" else "db_transaksi_pelanggan"
+    for idx, r in enumerate(rows[:5]):
+        print(f"[DEBUG] row {idx} length = {len(r)} | row = {r}")
+
+    # ✨ Convert to list of tuples matching self.headers
+    return rows
+
+def count_transaksi(mode_transaksi, search="", date_start=None, date_end=None):
+    if mode_transaksi == "pemasok":
+        tb = "db_transaksi_pemasok"
+        supplier = "db_master_pemasok"
+        key = "id_pemasok"
+    else:
+        tb = "db_transaksi_pelanggan"
+        supplier = "db_master_pelanggan"
+        key = "id_pelanggan"
+
     where = "WHERE is_timbang = 1"
+    where += " AND tanggal_masuk >= ? AND tanggal_masuk < ?"
+
+
+    params = []
+    params += [date_start, date_end]
+
     if search:
-        where += f" AND (no_tiket LIKE '%{search}%' OR no_polisi LIKE '%{search}%')"
-    query = f"SELECT COUNT(*) FROM {tb} {where}"
-    return execute_scalar(query)
-
-
-class TableLoaderModel(QAbstractTableModel):
-    def __init__(self, column_headers, fetch_callback, batch_size=100, parent=None):
-        super().__init__(parent)
-        self.headers = column_headers
-        self.fetch_callback = fetch_callback  # Fungsi(offset, limit) → list of tuples
-        self.batch_size = batch_size
-        self.data_rows = []
-        self.end_of_data = False
-
-        self.fetchMore()  # load awal
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self.data_rows)
-
-    def columnCount(self, parent=QModelIndex()):
-        return len(self.headers)
-
-    def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and index.isValid():
-            return str(self.data_rows[index.row()][index.column()])
-        return None
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self.headers[section]
-        return super().headerData(section, orientation, role)
-
-    def canFetchMore(self, parent=QModelIndex()):
-        return not self.end_of_data
-
-    def fetchMore(self, parent=QModelIndex()):
-        offset = len(self.data_rows)
-        new_rows = self.fetch_callback(offset, self.batch_size)
-
-        if not new_rows:
-            self.end_of_data = True
-            return
-
-        self.beginInsertRows(QModelIndex(), offset, offset + len(new_rows) - 1)
-        self.data_rows.extend(new_rows)
-        self.endInsertRows()
-
-class SmartTableModel(QAbstractTableModel):
-    def __init__(self, headers, fetch_callback, count_callback=None, batch_size=100, parent=None):
-        super().__init__(parent)
-        self.headers = headers
-        self.batch_size = batch_size
-
-        # Callback utama
-        self.fetch_callback = fetch_callback
-        self.count_callback = count_callback
-
-        # Dinamis
-        self.search_term = ""
-        self.sort_column = None
-        self.sort_order = Qt.AscendingOrder
-
-        # Data internal
-        self.data_rows = []
-        self.end_of_data = False
-
-        self.fetchMore()
-
-    def set_fetch_callback(self, callback):
-        self.fetch_callback = callback
-        self.reload()
-
-    def set_count_callback(self, callback):
-        self.count_callback = callback
-
-    def set_search_term(self, term):
-        term = term.strip()
-        if term != self.search_term:
-            self.search_term = term
-            self.reload()
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self.data_rows)
-
-    def columnCount(self, parent=QModelIndex()):
-        return len(self.headers)
-
-    def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and index.isValid():
-            return str(self.data_rows[index.row()][index.column()])
-        return None
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self.headers[section]
-        return super().headerData(section, orientation, role)
-
-    def canFetchMore(self, parent=QModelIndex()):
-        return not self.end_of_data
-
-    def fetchMore(self, parent=QModelIndex()):
-        if not self.fetch_callback:
-            return
-        offset = len(self.data_rows)
-        rows = self.fetch_callback(
-            offset,
-            self.batch_size,
-            self.search_term,
-            self.sort_column,
-            self.sort_order
+        where += f"""
+        AND (
+            no_tiket LIKE ? OR
+            no_polisi LIKE ? OR
+            nama_sopir LIKE ? OR
+            id_barang IN (
+                SELECT id FROM db_master_barang WHERE namabarang LIKE ?
+            ) OR
+            {key} IN (
+                SELECT id FROM {supplier} WHERE nama LIKE ?
+            )
         )
-        if not rows:
-            self.end_of_data = True
-            return
-        self.beginInsertRows(QModelIndex(), offset, offset + len(rows) - 1)
-        self.data_rows.extend(rows)
-        self.endInsertRows()
+        """
+        wild = f"%{search}%"
+        params += [wild] * 5
 
-    def sort(self, column, order=Qt.AscendingOrder):
-        self.sort_column = column
-        self.sort_order = order
-        self.reload()
+    query = f"SELECT COUNT(*) FROM {tb} {where}"
+    return execute_scalar(query, params)
 
-    def reload(self):
-        self.beginResetModel()
-        self.data_rows = []
-        self.end_of_data = False
-        self.endResetModel()
-        self.fetchMore()
-
-    def total_count(self):
-        if not self.count_callback:
-            return len(self.data_rows)
-        return self.count_callback(self.search_term)

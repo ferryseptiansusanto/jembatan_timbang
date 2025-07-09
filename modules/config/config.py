@@ -40,7 +40,7 @@ BYTESIZE_MAP = {
 DEFAULT_COMPORT = "COM3"
 
 # Mask Template untuk berat serial data
-BERAT_MASK_TEMPLATE = 'CC,CC,+NNNNN.NSS'
+REGEX_BERAT_TEMPLATE = r'^[A-Z]{2},[A-Z]{2},\+\d+(?:\.\d+)?kg$'
 
 def map_parity(code):
     return PARITY_MAP.get(code.upper(), PARITY_NONE)
