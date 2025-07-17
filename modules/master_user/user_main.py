@@ -7,6 +7,7 @@ from modules.helper.db import execute_query, init_qt_connection
 from qtviewmodels.checkbox_model import CheckBoxSqlTableModel
 from modules.config.config import TABLES
 
+
 class UserMain(QtWidgets.QWidget, Ui_Form):
     def __init__(self, current_user, current_user_level):
         super().__init__()
@@ -45,8 +46,6 @@ class UserMain(QtWidgets.QWidget, Ui_Form):
         self.btnSave.clicked.connect(self.save_user)
         self.btnDelete.clicked.connect(self.delete_user)
         self.btnClear.clicked.connect(self.clear_form)
-
-
 
     def fill_form_from_table(self, selected, deselected):
         indexes = self.tvUser.selectionModel().selectedRows()

@@ -35,13 +35,13 @@ class LoginMain(QtWidgets.QWidget, Ui_Form):
         hashed = hashlib.sha256(password.encode()).hexdigest()
 
         user = execute_select(
-            "SELECT username, level FROM db_master_user WHERE username = ? AND password = ? AND status = 1",
+            "SELECT id, username, level FROM db_master_user WHERE username = ? AND password = ? AND status = 1",
             (username, hashed)
         )
 
         if user:
             # Login sukses
-            auth.set_user(username, user[0][1])  # set current_user dan level
+            auth.set_user(user[0][0], username, user[0][2])  # set current_user dan level
             self.window_main = MainWindow()
             self.window_main.show()
             self.close()

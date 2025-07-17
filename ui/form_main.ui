@@ -40,6 +40,7 @@
      <string>File</string>
     </property>
     <addaction name="actionUser_Setting"/>
+    <addaction name="actionGanti_Password"/>
     <addaction name="actionLog_Off"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -87,7 +88,7 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionUser_Setting">
    <property name="text">
-    <string>User Setting</string>
+    <string>User Manager</string>
    </property>
   </action>
   <action name="actionLog_Off">
@@ -188,6 +189,11 @@
   <action name="actionPrint_Layout">
    <property name="text">
     <string>Print Layout</string>
+   </property>
+  </action>
+  <action name="actionGanti_Password">
+   <property name="text">
+    <string>Ganti Password</string>
    </property>
   </action>
  </widget>

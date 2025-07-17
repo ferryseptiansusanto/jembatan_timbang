@@ -1,15 +1,18 @@
 # modules/auth.py
 
-current_user = None
+current_userid = None
+current_username = None
 current_user_level = None
 
-def set_user(username, level):
-    global current_user, current_user_level
-    current_user = username
+def set_user(id, username, level):
+    global current_userid, current_username, current_user_level
+    current_userid = id
+    current_username = username
     current_user_level = level
-
-def get_user():
-    return current_user
+def get_userid():
+    return current_userid
+def get_username():
+    return current_username
 
 def get_level():
     return current_user_level

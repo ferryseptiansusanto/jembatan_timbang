@@ -2,6 +2,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QMessageBox, QFileDialog
 from modules.main_window.form_main import Ui_MainWindow
+from modules.master_user.ganti_password_main import GantiPasswordMain
 from modules.master_user.user_main import UserMain
 from modules.master_barang.barang_main import BarangMain
 from modules.master_pelanggan.pelanggan_main import PelangganMain
@@ -26,7 +27,7 @@ class MainWindow(QMainWindow):
         self.move(frame_geo.topLeft())
 
         self.setup_connections()
-        self.current_user = auth.get_user()
+        self.current_user = auth.get_username()
         self.current_user_level = auth.get_level()
 
         self.lblUser = QtWidgets.QLabel(f"User: {self.current_user}")
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
         self.timer.start(1000)  # update per detik
 
         self.page_user = UserMain(self.current_user, self.current_user_level)
+        self.page_ganti_password = GantiPasswordMain()
         self.page_barang = BarangMain(self.current_user, self.current_user_level)
         self.page_pelanggan = PelangganMain(self.current_user, self.current_user_level)
         self.page_pemasok = PemasokMain(self.current_user, self.current_user_level)
@@ -55,6 +57,7 @@ class MainWindow(QMainWindow):
         self.page_report_pemasok = ReportMain(self.current_user, self.current_user_level, mode_transaksi="pemasok")
 
         self.ui.stackedContent.addWidget(self.page_user)
+        self.ui.stackedContent.addWidget(self.page_ganti_password)
         self.ui.stackedContent.addWidget(self.page_barang)
         self.ui.stackedContent.addWidget(self.page_pelanggan)
         self.ui.stackedContent.addWidget(self.page_pemasok)
@@ -88,6 +91,10 @@ class MainWindow(QMainWindow):
     def open_user_form(self):
         self.ui.stackedContent.setCurrentWidget(self.page_user)
         self.setWindowTitle("User Management")
+
+    def open_ganti_password_form(self):
+        self.ui.stackedContent.setCurrentWidget(self.page_ganti_password)
+        self.setWindowTitle("Ganti Password")
 
     def open_barang_form(self):
         self.ui.stackedContent.setCurrentWidget(self.page_barang)
@@ -156,6 +163,8 @@ class MainWindow(QMainWindow):
 
     def setup_connections(self):
         self.ui.actionUser_Setting.triggered.connect(self.open_user_form)
+        self.ui.actionGanti_Password.triggered.connect(self.open_ganti_password_form)
+
         self.ui.actionMaster_Barang.triggered.connect(self.open_barang_form)
         self.ui.actionMaster_Customer.triggered.connect(self.open_pelanggan_form)
         self.ui.actionMaster_Supplier.triggered.connect(self.open_pemasok_form)
