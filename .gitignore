@@ -1,5 +1,4 @@
-.idea/
-*.xml
+﻿.idea/
 *.db
-venv/
 *.pdf
+venv/
