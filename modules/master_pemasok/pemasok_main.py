@@ -59,7 +59,7 @@ class PemasokMain(QtWidgets.QWidget, Ui_Form):
             self.id_record = record.value("id")
             self.edNama.setText(record.value("nama"))
             self.txtedAlamat.setPlainText(record.value("alamat"))
-            self.cbActive.setChecked(record.value("active") == 1)
+            self.cbActive.setChecked(record.value("status") == 1)
             self.set_mode()
 
     def save_record(self):
@@ -75,7 +75,7 @@ class PemasokMain(QtWidgets.QWidget, Ui_Form):
         modified_at = None
         created_by = self.current_user
         modified_by = None
-        active = 1 if self.cbActive.isChecked() else 0
+        status = 1 if self.cbActive.isChecked() else 0
 
         if not nama or not alamat:
             QtWidgets.QMessageBox.warning(self, "Input tidak lengkap", "Isi semua field wajib.")
@@ -84,16 +84,16 @@ class PemasokMain(QtWidgets.QWidget, Ui_Form):
         try:
             execute_query(f"""
                 INSERT INTO {TABLES['TblPemasok']} (nama, alamat, created_at, modified_at, created_by
-                , modified_by, active)
+                , modified_by, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (nama, alamat, created_at, modified_at, created_by, modified_by, active))
+            """, (nama, alamat, created_at, modified_at, created_by, modified_by, status))
 
             QtWidgets.QMessageBox.information(self, "Sukses", f"User '{nama}' berhasil ditambahkan.")
             self.clear_form()
             self.refresh_model()
 
         except sqlite3.IntegrityError as e:
-            QtWidgets.QMessageBox.critical(self, "Gagal", f"Username '{nama}' sudah digunakan.")
+            QtWidgets.QMessageBox.critical(self, "Gagal", f"Nama '{nama}' sudah digunakan.")
 
     def edit_record(self):
         id_record = self.id_record
@@ -101,13 +101,13 @@ class PemasokMain(QtWidgets.QWidget, Ui_Form):
         alamat = self.txtedAlamat.toPlainText()
         modified_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         modified_by = self.current_user
-        active = 1 if self.cbActive.isChecked() else 0
+        status = 1 if self.cbActive.isChecked() else 0
 
         execute_query(f"""
             UPDATE {TABLES['TblPemasok']}
-            SET nama=?, alamat=?, modified_at=?, modified_by=?, active=?
+            SET nama=?, alamat=?, modified_at=?, modified_by=?, status=?
             WHERE id = ?
-        """, (nama, alamat, modified_at, modified_by, active, id_record))
+        """, (nama, alamat, modified_at, modified_by, status, id_record))
 
         QtWidgets.QMessageBox.information(self, "Berhasil", "Data pelanggan diperbarui.")
         self.clear_form()

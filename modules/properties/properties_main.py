@@ -20,10 +20,29 @@ class PropertiesMain(QtWidgets.QWidget, Ui_Form):
         self.setWindowTitle(f"Setting - Login oleh: {self.current_user}")
         self.refresh_port()
         self.load_record()
+        # Menyembunyikan tab kedua (index 1)
+        self.tabWidget.tabBar().hide()
 
     def connect_signals(self):
         self.btnSave.clicked.connect(self.save_record)
-        self.btnRefresh.clicked.connect(self.refresh_port)
+        self._cbbComport_original_showPopup = self.cbbComport.showPopup
+
+        def custom_showPopup():
+            # Ingat teks port yang sedang dipilih saat ini
+            port_sebelumnya = self.cbbComport.currentText()
+
+            # Tarik data port terbaru dari sistem
+            self.refresh_port()
+
+            # Kembalikan pilihan ke port semula (jika port tersebut masih terhubung ke PC)
+            if port_sebelumnya:
+                self.cbbComport.setCurrentText(port_sebelumnya)
+
+            # Tampilkan list dropdown-nya
+            self._cbbComport_original_showPopup()
+
+        # 3. Timpa fungsi aslinya dengan fungsi custom kita
+        self.cbbComport.showPopup = custom_showPopup
 
     def refresh_port(self):
         self.cbbComport.clear()

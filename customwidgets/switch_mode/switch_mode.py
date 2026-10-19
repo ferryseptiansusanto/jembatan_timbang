@@ -32,3 +32,4 @@ class SwitchMode:
 
     def is_checked(self):
         return self.switch.isChecked()
+

@@ -4,9 +4,11 @@ from datetime import datetime
 from tqdm import tqdm
 import os
 
+
 def backup_sqlite_to_zip(db_path, output_dir):
     """
-    Backup database SQLite ke file .sql dan kompresi .zip berisi INSERT INTO statements saja.
+    Backup database SQLite ke file .sql dan kompresi .zip.
+    Menyimpan struktur (CREATE) dan isi (INSERT), kecuali tabel sistem (sqlite_).
     Returns path file ZIP.
     """
     if not os.path.exists(output_dir):
@@ -19,11 +21,22 @@ def backup_sqlite_to_zip(db_path, output_dir):
 
     try:
         conn = sqlite3.connect(db_path)
-        inserts = [line for line in conn.iterdump() if line.startswith("INSERT INTO")]
+
+        dump_lines = []
+        for line in conn.iterdump():
+            # 1. FILTER: Jangan backup perintah CREATE untuk tabel internal SQLite
+            if "CREATE TABLE" in line and "sqlite_" in line:
+                continue
+            # 2. FILTER: Jangan masukkan data ke tabel statistik internal SQLite
+            if "INSERT INTO" in line and "sqlite_stat" in line:
+                continue
+
+            dump_lines.append(line)
+
         conn.close()
 
         with open(sql_path, 'w', encoding='utf-8') as f:
-            for line in tqdm(inserts, desc="🔄 Membackup database", unit="baris", leave=False):
+            for line in tqdm(dump_lines, desc="🔄 Membackup database", unit="baris", leave=False):
                 f.write(f"{line}\n")
 
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:

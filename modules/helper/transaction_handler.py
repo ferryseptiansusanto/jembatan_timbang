@@ -22,7 +22,7 @@ def validasi_transaksi(no_tiket, t1, t2):
 
 def proses_timbang_keluar(mode, no_tiket, data_update, current_user, keterangan, timbang2):
     existing = get_transaksi_by_no_tiket(mode, no_tiket)
-    if not existing or existing[-1] == 1:
+    if not existing or existing[-1] > 0:
         return False  # Sudah selesai atau tidak ada
     gross, tare, is_timbang = hitung_gross_tare(data_update['timbang1'], timbang2)
 
@@ -68,4 +68,27 @@ def proses_timbang_masuk(mode, no_tiket, form_data, current_user):
     }
 
     insert_transaksi_pemasok_pelanggan(mode, data_insert)
+    return True
+
+
+def proses_edit_data(mode, no_tiket, form_data):
+    id_pemasok_pelanggan = get_id_pemasok_pelanggan_by_nama(mode, form_data['pemasok'])
+    id_barang = get_id_barang_by_nama(form_data['barang'])
+
+    if not id_pemasok_pelanggan or not id_barang:
+        return False
+
+    id_field = "id_pemasok" if mode == "pemasok" else "id_pelanggan"
+
+    # Kumpulkan hanya data teks untuk di-update (berat & status tidak diubah)
+    updated_data = {
+        "no_polisi": form_data['nopol'],
+        "no_po_do": form_data['nopo'],
+        id_field: id_pemasok_pelanggan,
+        "id_barang": id_barang,
+        "nama_sopir": form_data['sopir'],
+        "keterangan": form_data['keterangan']
+    }
+
+    update_transaksi_timbang_kedua(mode, no_tiket, updated_data)
     return True

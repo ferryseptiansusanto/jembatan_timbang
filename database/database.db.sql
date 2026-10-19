@@ -1,102 +1,121 @@
-BEGIN TRANSACTION;
-CREATE TABLE IF NOT EXISTS "db_master_barang" (
-	"id"	INTEGER,
-	"namabarang"	TEXT UNIQUE,
-	"kategori"	TEXT,
-	"created_date"	INTEGER,
-	"modified_date"	INTEGER,
-	"created_by"	INTEGER,
-	"modified_by"	INTEGER,
-	PRIMARY KEY("id" AUTOINCREMENT)
+-- we don't know how to generate root <with-no-name> (class Root) :(
+create table db_master_barang
+(
+    id            INTEGER
+        primary key autoincrement,
+    namabarang    TEXT
+        unique,
+    kategori      TEXT,
+    created_date  INTEGER,
+    modified_date INTEGER,
+    created_by    INTEGER,
+    modified_by   INTEGER,
+    status        integer
 );
-CREATE TABLE IF NOT EXISTS "db_master_pelanggan" (
-	"id"	INTEGER,
-	"nama"	TEXT UNIQUE,
-	"alamat"	TEXT,
-	"created_at"	INTEGER,
-	"modified_at"	INTEGER,
-	"created_by"	INTEGER,
-	"modified_by"	INTEGER,
-	PRIMARY KEY("id" AUTOINCREMENT)
+
+create table db_master_pelanggan
+(
+    id          INTEGER
+        primary key autoincrement,
+    nama        TEXT
+        unique,
+    alamat      TEXT,
+    created_at  INTEGER,
+    modified_at INTEGER,
+    created_by  INTEGER,
+    modified_by INTEGER,
+    status      integer
 );
-CREATE TABLE IF NOT EXISTS "db_master_pemasok" (
-	"id"	INTEGER,
-	"nama"	TEXT UNIQUE,
-	"alamat"	TEXT,
-	"created_at"	INTEGER,
-	"modified_at"	INTEGER,
-	"created_by"	INTEGER,
-	"modified_by"	INTEGER,
-	PRIMARY KEY("id" AUTOINCREMENT)
+
+create table db_master_pemasok
+(
+    id          INTEGER
+        primary key autoincrement,
+    nama        TEXT
+        unique,
+    alamat      TEXT,
+    created_at  INTEGER,
+    modified_at INTEGER,
+    created_by  INTEGER,
+    modified_by INTEGER,
+    status      INTEGER
 );
-CREATE TABLE IF NOT EXISTS "db_master_user" (
-	"id"	INTEGER,
-	"username"	TEXT UNIQUE,
-	"password"	TEXT,
-	"level"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
+
+create table db_master_user
+(
+    id       INTEGER
+        primary key autoincrement,
+    username TEXT
+        unique,
+    password TEXT,
+    level    TEXT,
+    status   integer,
+    nama     text
 );
-CREATE TABLE IF NOT EXISTS "db_properties" (
-	"id"	INTEGER,
-	"nama_perusahaan"	TEXT UNIQUE,
-	"alamat"	TEXT,
-	"telepon"	TEXT,
-	"comport"	TEXT,
-	"baudrate"	TEXT,
-	"databits"	TEXT,
-	"stopbits"	TEXT,
-	"parity"	TEXT,
-	"flowcontrol"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
+
+create table db_properties
+(
+    id              INTEGER
+        primary key autoincrement,
+    nama_perusahaan TEXT
+        unique,
+    alamat          TEXT,
+    telepon         TEXT,
+    comport         TEXT,
+    baudrate        TEXT,
+    databits        TEXT,
+    stopbits        TEXT,
+    parity          TEXT,
+    flowcontrol     TEXT
 );
-CREATE TABLE IF NOT EXISTS "db_transaksi_pelanggan" (
-	"id"	INTEGER,
-	"no_tiket"	TEXT,
-	"no_polisi"	TEXT,
-	"no_po_do"	TEXT,
-	"id_pelanggan"	INTEGER,
-	"id_barang"	INTEGER,
-	"nama_sopir"	TEXT,
-	"gross"	NUMERIC,
-	"tare"	NUMERIC,
-	"netto"	NUMERIC,
-	"tanggal_masuk"	INTEGER,
-	"tanggal_keluar"	INTEGER,
-	"keterangan"	TEXT,
-	"operator_timbang_masuk"	INTEGER,
-	"operator_timbang_keluar"	INTEGER,
-	"is_timbang"	INTEGER,
-	PRIMARY KEY("id" AUTOINCREMENT),
-	FOREIGN KEY("id_barang") REFERENCES "db_master_barang"("id"),
-	FOREIGN KEY("id_pelanggan") REFERENCES "db_master_pelanggan"("id")
+
+create table db_transaksi_pelanggan
+(
+    id                      INTEGER
+        primary key autoincrement,
+    no_tiket                TEXT,
+    no_polisi               TEXT,
+    no_po_do                TEXT,
+    id_pelanggan            INTEGER
+        references db_master_pelanggan,
+    id_barang               INTEGER
+        references db_master_barang,
+    nama_sopir              TEXT,
+    gross                   NUMERIC,
+    tare                    NUMERIC,
+    netto                   NUMERIC,
+    tanggal_masuk           INTEGER,
+    tanggal_keluar          INTEGER,
+    keterangan              TEXT,
+    operator_timbang_masuk  INTEGER,
+    operator_timbang_keluar INTEGER,
+    is_timbang              INTEGER,
+    timbang1                NUMERIC,
+    timbang2                NUMERIC
 );
-CREATE TABLE IF NOT EXISTS "db_transaksi_pemasok" (
-	"id"	INTEGER,
-	"no_tiket"	TEXT,
-	"no_polisi"	TEXT,
-	"no_po_do"	TEXT,
-	"id_pemasok"	INTEGER,
-	"id_barang"	INTEGER,
-	"nama_sopir"	TEXT,
-	"gross"	NUMERIC,
-	"tare"	NUMERIC,
-	"netto"	NUMERIC,
-	"tanggal_masuk"	INTEGER,
-	"tanggal_keluar"	INTEGER,
-	"keterangan"	TEXT,
-	"operator_timbang_masuk"	INTEGER,
-	"operator_timbang_keluar"	INTEGER,
-	"is_timbang"	INTEGER,
-	PRIMARY KEY("id" AUTOINCREMENT),
-	FOREIGN KEY("id_barang") REFERENCES "db_master_barang"("id"),
-	FOREIGN KEY("id_pemasok") REFERENCES "db_master_pemasok"("id")
+
+create table db_transaksi_pemasok
+(
+    id                      INTEGER
+        primary key autoincrement,
+    no_tiket                TEXT,
+    no_polisi               TEXT,
+    no_po_do                TEXT,
+    id_pemasok              INTEGER
+        references db_master_pemasok,
+    id_barang               INTEGER
+        references db_master_barang,
+    nama_sopir              TEXT,
+    gross                   NUMERIC,
+    tare                    NUMERIC,
+    netto                   NUMERIC,
+    tanggal_masuk           INTEGER,
+    tanggal_keluar          INTEGER,
+    keterangan              TEXT,
+    operator_timbang_masuk  INTEGER,
+    operator_timbang_keluar INTEGER,
+    is_timbang              INTEGER,
+    timbang1                NUMERIC,
+    timbang2                NUMERIC
 );
-CREATE TABLE IF NOT EXISTS "sqlite_stat4" (
-	"tbl"	,
-	"idx"	,
-	"neq"	,
-	"nlt"	,
-	"ndlt"	,
-	"sample"	
-);
-COMMIT;
+

@@ -59,7 +59,7 @@ class BarangMain(QtWidgets.QWidget, Ui_Form):
             self.id_record = record.value("id")
             self.edNamaBarang.setText(record.value("namabarang"))
             self.edKategori.setText(record.value("kategori"))
-            self.cbActive.setChecked(record.value("active") == 1)
+            self.cbActive.setChecked(record.value("status") == 1)
             self.set_mode()
 
     def save_record(self):
@@ -75,7 +75,7 @@ class BarangMain(QtWidgets.QWidget, Ui_Form):
         modified_date = None
         created_by = self.current_user
         modified_by = None
-        active = 1 if self.cbActive.isChecked() else 0
+        status = 1 if self.cbActive.isChecked() else 0
 
         if not namabarang or not kategori:
             QtWidgets.QMessageBox.warning(self, "Input tidak lengkap", "Isi semua field wajib.")
@@ -84,16 +84,16 @@ class BarangMain(QtWidgets.QWidget, Ui_Form):
         try:
             execute_query(f"""
                 INSERT INTO {TABLES['TblBarang']} (namabarang, kategori, created_date, modified_date, created_by
-                , modified_by, active)
+                , modified_by, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (namabarang, kategori, created_date, modified_date, created_by, modified_by, active))
+            """, (namabarang, kategori, created_date, modified_date, created_by, modified_by, status))
 
             QtWidgets.QMessageBox.information(self, "Sukses", f"User '{namabarang}' berhasil ditambahkan.")
             self.clear_form()
             self.refresh_model()
 
         except sqlite3.IntegrityError as e:
-            QtWidgets.QMessageBox.critical(self, "Gagal", f"Username '{namabarang}' sudah digunakan.")
+            QtWidgets.QMessageBox.critical(self, "Gagal", f"Nama barang '{namabarang}' sudah digunakan.")
 
     def edit_record(self):
         id_record = self.id_record
@@ -101,13 +101,13 @@ class BarangMain(QtWidgets.QWidget, Ui_Form):
         kategori = self.edKategori.text()
         modified_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         modified_by = self.current_user
-        active = 1 if self.cbActive.isChecked() else 0
+        status = 1 if self.cbActive.isChecked() else 0
 
         execute_query(f"""
             UPDATE {TABLES['TblBarang']}
-            SET namabarang=?, kategori=?, modified_date=?, modified_by=?, active=?
+            SET namabarang=?, kategori=?, modified_date=?, modified_by=?, status=?
             WHERE id = ?
-        """, (namabarang, kategori, modified_date, modified_by, active, id_record))
+        """, (namabarang, kategori, modified_date, modified_by, status, id_record))
 
         QtWidgets.QMessageBox.information(self, "Berhasil", "Data barang diperbarui.")
         self.clear_form()

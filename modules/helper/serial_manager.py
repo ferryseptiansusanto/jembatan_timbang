@@ -3,6 +3,7 @@ from modules.helper.serialworker import SerialWorker
 from modules.config.config import map_parity, map_stopbits, map_bytesize
 from modules.helper.xmlconfigurator import baca_konfigurasi
 
+
 class SerialManager(QObject):
     data_received = pyqtSignal(str)
     status_changed = pyqtSignal(str, bool)
@@ -19,6 +20,10 @@ class SerialManager(QObject):
         self.reconnect_timer.timeout.connect(self._attempt_reconnect)
         self.config = baca_konfigurasi()
 
+    # --- 1. TAMBAHKAN FUNGSI INI AGAR BISA DICEK OLEH TIMBANG MAIN ---
+    def isRunning(self):
+        return self.thread is not None and self.thread.isRunning()
+
     def start(self):
         if self.thread and self.thread.isRunning():
             print("[WARN] Thread sudah aktif, tidak akan restart.")
@@ -30,7 +35,7 @@ class SerialManager(QObject):
 
         self._setup_worker_thread()
         self.thread.start()
-        self.status_changed.emit(self.config["comport"], True)
+        self.status_changed.emit(self.config.get("comport", ""), True)
 
     def _setup_worker_thread(self):
         self.worker = SerialWorker(
@@ -77,17 +82,21 @@ class SerialManager(QObject):
         print("[INFO] Mencoba reconnect COM port...")
         self.start()
 
+    # --- 2. PERBAIKI FUNGSI STOP INI ---
     def stop(self):
         self._is_stopping = True  # tandai manual stop
+        self.reconnect_timer.stop()
 
         if self.worker:
-            self.worker.stop()
-            self.worker = None
+            self.worker.stop()  # Beri perintah kepada worker untuk menutup port
 
         if self.thread and self.thread.isRunning():
             self.thread.quit()
-            self.thread.wait()
-            self.thread = None
+            self.thread.wait(2000)  # Beri waktu toleransi 2 detik agar Windows benar-benar melepas port
 
         self.status_changed.emit("", False)
-        self.reconnect_timer.stop()
+
+        # CATATAN PENTING:
+        # Jangan mengubah self.worker dan self.thread menjadi None di sini!
+        # Biarkan fungsi on_finished() yang membersihkannya secara elegan
+        # setelah port fisik benar-benar tertutup.

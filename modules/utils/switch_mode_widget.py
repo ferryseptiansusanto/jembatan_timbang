@@ -56,11 +56,11 @@ class SwitchModeWidget(QWidget):
 
     def set_checked(self, checked):
         self.switch.setChecked(checked)
+        self._update_label(checked)
 
     def set_callback(self, func):
         self.toggled.disconnect()
         self.toggled.connect(func)
-
 
 
 class SwitchButton(QWidget):
@@ -80,10 +80,21 @@ class SwitchButton(QWidget):
         return self.property("checked")
 
     def setChecked(self, checked):
+        # 1. Cegah tumpang-tindih! Jika statusnya sudah sama, abaikan agar animasi tidak me-reset
+        if self.property("checked") == checked:
+            return
+
         self.setProperty("checked", checked)
-        self._animation.setStartValue(self._position)
-        self._animation.setEndValue(1 if checked else 0)
+
+        # 2. Jika masih ada sisa animasi sebelumnya yang berjalan, hentikan dulu
+        if self._animation.state() == QPropertyAnimation.Running:
+            self._animation.stop()
+
+        # 3. PASTIKAN menggunakan Float (1.0 dan 0.0) agar pergerakan animasinya mulus
+        self._animation.setStartValue(float(self._position))
+        self._animation.setEndValue(1.0 if checked else 0.0)
         self._animation.start()
+
         self.update()
 
     def toggle(self):

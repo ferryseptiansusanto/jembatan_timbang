@@ -5,6 +5,8 @@ from modules.config.config import DB_PATH  # atau atur path langsung di sini
 from modules.helper.konversidatetime import format_ts
 from PyQt5.QtSql import QSqlDatabase
 from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QTimer
+from datetime import datetime
+
 
 def open_db_connection():
     return sqlite3.connect(DB_PATH)
@@ -33,7 +35,7 @@ def execute_query(query, params=()):
 # ]
 #
 # query = """
-#     INSERT INTO db_master_barang (namabarang, kategori, active)
+#     INSERT INTO db_master_barang (namabarang, kategori, status)
 #     VALUES (?, ?, ?)
 # """
 #
@@ -46,7 +48,7 @@ def execute_many(query, param_list):
     conn.close()
 
 # HOW TO USE
-# rows = execute_select("SELECT id, username FROM db_master_user WHERE active = 1")
+# rows = execute_select("SELECT id, username FROM db_master_user WHERE status = 1")
 # for row in rows:
 #     print(row[0], row[1])
 def execute_select(query, params=()):
@@ -78,7 +80,7 @@ def init_qt_connection():
 def get_nama_barang_aktif():
     rows = execute_select("""
         SELECT namabarang FROM db_master_barang 
-        WHERE active = 1 
+        WHERE status = 1 
         ORDER BY namabarang
     """)
     return [r[0] for r in rows]
@@ -91,7 +93,7 @@ def get_nama_pemasok_pelanggan_aktif(mode_transaksi):
     tb = "db_master_pemasok" if mode_transaksi == "pemasok" else "db_master_pelanggan"
     rows = execute_select(f"""
         SELECT nama FROM {tb} 
-        WHERE active = 1 
+        WHERE status = 1 
         ORDER BY nama
     """)
     return [r[0] for r in rows]
@@ -99,7 +101,7 @@ def get_nama_pemasok_pelanggan_aktif(mode_transaksi):
 def get_nama_pemasok_pelanggan_id(mode_transaksi, id_pemasok_pelanggan):
     tb = "db_master_pemasok" if mode_transaksi == "pemasok" else "db_master_pelanggan"
 
-    query = f"SELECT nama FROM {tb} WHERE active = 1 AND id = ? ORDER BY nama"
+    query = f"SELECT nama FROM {tb} WHERE status = 1 AND id = ? ORDER BY nama"
     rows = execute_select(query, (id_pemasok_pelanggan,))
 
     return rows[0][0] if rows else None
@@ -107,14 +109,14 @@ def get_nama_pemasok_pelanggan_id(mode_transaksi, id_pemasok_pelanggan):
 def get_id_pemasok_pelanggan_by_nama(mode_transaksi, nama):
     tb = "db_master_pemasok" if mode_transaksi == "pemasok" else "db_master_pelanggan"
     result = execute_select(
-        f"SELECT id FROM {tb} WHERE nama = ? AND active = 1",
+        f"SELECT id FROM {tb} WHERE nama = ? AND status = 1",
         (nama,)
     )
     return result[0][0] if result else None
 
 def get_id_barang_by_nama(nama):
     result = execute_select(
-        "SELECT id FROM db_master_barang WHERE namabarang = ? AND active = 1",
+        "SELECT id FROM db_master_barang WHERE namabarang = ? AND status = 1",
         (nama,)
     )
     return result[0][0] if result else None
@@ -206,7 +208,9 @@ def update_transaksi_timbang_kedua(mode_transaksi, no_tiket, data):
     query = f"UPDATE {tb} SET {fields} WHERE no_tiket = ?"
     execute_query(query, values)
 
-def fetch_transaksi(mode_transaksi, offset, limit, search, sort_col, sort_order, date_start=None, date_end=None):
+
+def fetch_transaksi(mode_transaksi, offset, limit, search, sort_col, sort_order, date_start=None, date_end=None, status_timbang=None):
+    # 1. Penentuan Tabel dan Relasi (JOIN)
     if mode_transaksi == "pemasok":
         tb = "db_transaksi_pemasok"
         join = "LEFT JOIN db_master_pemasok s ON t.id_pemasok = s.id"
@@ -214,21 +218,34 @@ def fetch_transaksi(mode_transaksi, offset, limit, search, sort_col, sort_order,
         tb = "db_transaksi_pelanggan"
         join = "LEFT JOIN db_master_pelanggan s ON t.id_pelanggan = s.id"
 
+    # 2. Pemetaan Kolom untuk Sorting
     sort_map = {
         0: "t.no_tiket", 1: "t.no_polisi", 2: "t.no_po_do", 3: "s.nama",
         4: "b.namabarang", 5: "t.nama_sopir", 6: "t.gross",
         7: "t.tare", 8: "t.netto", 9: "t.tanggal_masuk"
     }
-
     sort_field = sort_map.get(sort_col, "t.tanggal_masuk")
-    direction = "ASC" if sort_order == Qt.AscendingOrder else "DESC"
 
-    where = "WHERE t.is_timbang = 1"
-    where += " AND t.tanggal_masuk >= ? AND t.tanggal_masuk < ?"
+    # Menangani arah sort agar aman dari bentrok Enum PyQt dan String biasa
+    if isinstance(sort_order, str):
+        direction = sort_order
+    else:
+        direction = "ASC" if sort_order == Qt.AscendingOrder else "DESC"
 
+    # 3. Logika Filter Pintar (Penengah UI)
+    where = "WHERE 1=1"
     params = []
-    params += [date_start, date_end]
 
+    if date_start is not None and date_end is not None:
+        # Jika dipanggil dari REPORT MAIN (Ada Tanggal) -> Tampilkan Histori Truk Selesai
+        where += " AND t.tanggal_masuk >= ? AND t.tanggal_masuk < ?"
+        params.extend([date_start, date_end])
+
+    if status_timbang is not None:
+        where += " AND t.is_timbang = ?"
+        params.append(status_timbang)
+
+    # 4. Filter Pencarian Teks
     if search:
         where += """
         AND (
@@ -240,8 +257,9 @@ def fetch_transaksi(mode_transaksi, offset, limit, search, sort_col, sort_order,
         )
         """
         wild = f"%{search}%"
-        params += [wild] * 5
+        params.extend([wild] * 5)
 
+    # 5. Perakitan dan Eksekusi SQL
     query = f"""
         SELECT 
             t.no_tiket, t.no_polisi, t.no_po_do,
@@ -258,16 +276,13 @@ def fetch_transaksi(mode_transaksi, offset, limit, search, sort_col, sort_order,
         ORDER BY {sort_field} {direction}
         LIMIT ? OFFSET ?
     """
-    params += [limit, offset]
-    rows = execute_select(query, params)
+    params.extend([limit, offset])
 
-    for idx, r in enumerate(rows[:5]):
-        print(f"[DEBUG] row {idx} length = {len(r)} | row = {r}")
+    return execute_select(query, params)
 
-    # ✨ Convert to list of tuples matching self.headers
-    return rows
 
-def count_transaksi(mode_transaksi, search="", date_start=None, date_end=None):
+def count_transaksi(mode_transaksi, search="", date_start=None, date_end=None, status_timbang=1):
+    # 1. Penentuan Tabel
     if mode_transaksi == "pemasok":
         tb = "db_transaksi_pemasok"
         supplier = "db_master_pemasok"
@@ -277,13 +292,21 @@ def count_transaksi(mode_transaksi, search="", date_start=None, date_end=None):
         supplier = "db_master_pelanggan"
         key = "id_pelanggan"
 
-    where = "WHERE is_timbang = 1"
-    where += " AND tanggal_masuk >= ? AND tanggal_masuk < ?"
-
-
+    # 2. Logika Filter Pintar (Penengah UI)
+    where = "WHERE 1=1"
     params = []
-    params += [date_start, date_end]
 
+    if date_start is not None and date_end is not None:
+        # Jika dari REPORT MAIN
+        where += " AND tanggal_masuk >= ? AND tanggal_masuk < ?"
+        params.extend([date_start, date_end])
+
+    # Filter Status Timbang (dinamis berdasarkan argumen)
+    if status_timbang is not None:
+        where += " AND is_timbang = ?"
+        params.append(status_timbang)
+
+    # 3. Filter Pencarian Teks (Sub-query untuk tabel relasi)
     if search:
         where += f"""
         AND (
@@ -299,8 +322,66 @@ def count_transaksi(mode_transaksi, search="", date_start=None, date_end=None):
         )
         """
         wild = f"%{search}%"
-        params += [wild] * 5
+        params.extend([wild] * 5)
 
+    # 4. Eksekusi SQL Hitung Total
     query = f"SELECT COUNT(*) FROM {tb} {where}"
     return execute_scalar(query, params)
 
+
+def generate_next_no_tiket(mode_transaksi):
+    """
+    Generate nomor tiket 8 digit: YYMMNNNN menggunakan MAX()
+    Contoh: 26100001 (Tahun 26, Bulan 10, Urutan 0001)
+    """
+    if mode_transaksi == "pelanggan":
+        table_name = "db_transaksi_pelanggan"
+    else:
+        table_name = "db_transaksi_pemasok"
+
+    now = datetime.now()
+    prefix = now.strftime("%y%m")  # Contoh output: "2610" untuk Oktober 2026
+
+    # Kita bisa memanfaatkan execute_scalar yang sudah ada di file ini
+    query = f"SELECT MAX(no_tiket) FROM {table_name} WHERE no_tiket LIKE ?"
+
+    # execute_scalar mengembalikan nilai tunggal, jika tidak ada tiket akan return None
+    last_ticket = execute_scalar(query, (f"{prefix}%",))
+
+    if last_ticket:
+        last_ticket_str = str(last_ticket).strip()
+        try:
+            # Ambil 4 digit terakhir dan tambahkan 1
+            last_seq = int(last_ticket_str[-4:])
+            next_seq = last_seq + 1
+        except ValueError:
+            next_seq = 1
+    else:
+        # Jika belum ada data tiket sama sekali di bulan tersebut
+        next_seq = 1
+
+    # Format menjadi string dengan leading zero 4 digit
+    return f"{prefix}{next_seq:04d}"
+
+def get_selected_tiket(self):
+    """Mendapatkan No Tiket dari baris yang diklik di tabel"""
+    indexes = self.tableView.selectionModel().selectedRows()
+    if not indexes:
+        return None
+
+    # Ambil baris pertama yang di-select
+    row = indexes[0].row()
+
+    # Kolom 0 adalah No Tiket (berdasarkan headers di ReportTableModel)
+    index_tiket = self.model_transaksi.index(row, 0)
+    no_tiket = self.model_transaksi.data(index_tiket)
+    return str(no_tiket).strip()
+
+def hapus_transaksi_by_tiket(mode_transaksi, no_tiket):
+    if mode_transaksi == "pemasok":
+        tb = "db_transaksi_pemasok"
+    else:
+        tb = "db_transaksi_pelanggan"
+
+    query = f"DELETE FROM {tb} WHERE no_tiket = ?"
+    execute_query(query, (no_tiket,))

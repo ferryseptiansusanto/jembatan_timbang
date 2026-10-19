@@ -27,11 +27,13 @@ class ReportMain(QtWidgets.QWidget, Ui_Form):
         # Optional: tetap pakai ReportHandler untuk fitur export nanti
         self.report = ReportHandler(mode_transaksi=self.mode_transaksi)
 
-        # Header kolom tabel
+        # Header kolom tabel yang sudah disesuaikan dengan Output Database
         self.headers = [
             "Tiket", "Nopol", "PO/DO",
-            "Nama Pemasok" if self.mode_transaksi == "pemasok" else "Nama Pelanggan",
-            "Barang", "Sopir", "Gross", "Tare", "Netto",
+            "Nama Pemasok" if self.mode_transaksi == "pemasok" else "Nama Pelanggan",  # <-- Indeks 3
+            "Barang",  # <-- Indeks 4
+            "Sopir",  # <-- Indeks 5
+            "Gross", "Tare", "Netto",
             "Masuk", "Keluar", "Keterangan"
         ]
 
@@ -77,16 +79,15 @@ class ReportMain(QtWidgets.QWidget, Ui_Form):
             search,
             sort_col,
             sort_order,
-            ts_start,
-            ts_end
+            date_start=ts_start,
+            date_end=ts_end,
+            status_timbang=1  # PERBAIKAN 2: Hanya ambil transaksi selesai
         )
 
     def count_data(self, search):
-
-
         if not self.dateStart.date().isValid() or not self.dateEnd.date().isValid():
             QtWidgets.QMessageBox.warning(self, "Tanggal Tidak Valid", "Isi rentang tanggal dengan benar.")
-            return
+            return 0
 
         ts_start, ts_end = get_range_timestamp(self.dateStart.date(), self.dateEnd.date())
 
@@ -96,8 +97,9 @@ class ReportMain(QtWidgets.QWidget, Ui_Form):
         return count_transaksi(
             self.mode_transaksi,
             search,
-            ts_start,
-            ts_end
+            date_start=ts_start,
+            date_end=ts_end,
+            status_timbang=1  # PERBAIKAN 2: Hanya ambil transaksi selesai
         )
 
     def setConfigPreview(self):
@@ -134,12 +136,21 @@ class ReportMain(QtWidgets.QWidget, Ui_Form):
             self.model.headers,
             self.model.get_all_data(),
             fields_config,
-            sort_by="Tiket",
+            sort_by="Masuk",
             sort_reverse=False  # default: ascending
         )
 
     def excel_data(self):
-        file_path = os.path.join(os.path.expanduser("~"), "Documents", "Laporan Timbang.xlsx")
+        # Prompt user for save location
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Simpan Laporan Excel",
+            os.path.join(os.path.expanduser("~"), "Documents", "Laporan Timbang.xlsx"),
+            "Excel Files (*.xlsx);;All Files (*)"
+        )
+
+        if not file_path:
+            return  # User cancelled the dialog
 
         preview = PDFReportPreviewConfigurable(
             title="Laporan Timbang",
@@ -154,6 +165,6 @@ class ReportMain(QtWidgets.QWidget, Ui_Form):
             data_rows=self.model.get_all_data(),
             fields_config=fields_config,
             file_path=file_path,
-            sort_by="tanggal_masuk"
+            sort_by="Masuk"  # See point 3 below
         )
 

@@ -3,17 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <style>
-
         @media print {
-            @page {
-                size: 105mm;
-                margin: 5mm;
-            }
+            @page { size: 105mm; margin: 5mm; }
         }
-        .section {
-            margin-bottom: 8px;
-        }
-
         body {
             width: 105mm;
             font-family: "Courier New", monospace;
@@ -23,67 +15,35 @@
         }
         .header {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             line-height: 1.4;
         }
-
-        .footer {
-            margin-top: 30px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;       /* Pastikan semua mulai sejajar dari atas */
-            gap: 80px;                     /* Jarak antar tanda tangan */
-        }
-
-        .signature-block {
-            width: 150px;
-            text-align: center;
-        }
-
-        .title {
-            font-weight: bold;
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 10pt;
-            margin-bottom: 40px;           /* Jarak kosong untuk lokasi tanda tangan */
         }
-
-        .signature-line {
-            border-top: 1px solid #000;
-            margin_top: 4px;
-            padding-top: 4px;
-            font-size: 10pt;
+        .label {
+            width: 120px;
+            text-align: left; /* Teks label rata kiri agar rapi */
+        }
+        .info-table td {
+            padding: 3px 2px;
+            vertical-align: top;
         }
         .note {
             margin-top: 15px;
             font-style: italic;
+            font-size: 10pt;
         }
-
-        .info-table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 10pt;
+        /* Menggunakan tabel untuk layout tanda tangan yang kebal PyQt5 */
+        .footer-table {
+            width: 100%;
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10pt;
+            border: none;
         }
-
-        .label {
-            width: 80px;
-            text-align: right;
-            padding-right: 8px;
-        }
-
-        .info-table td {
-            padding: 4px 6px;
-        }
-        .label {
-            width: 120px;
-            text-align: right;
-            padding-right: 6px;
-        }
-
-      td {
-          padding: 3px 6px;
-      }
-
-
-
     </style>
 </head>
 <body>
@@ -104,21 +64,20 @@
       <tr><td class="label">Gross</td><td>:</td><td>{{gross}} Kg</td></tr>
       <tr><td class="label">Tare</td><td>:</td><td>{{tare}} Kg</td></tr>
       <tr><td class="label">Netto</td><td>:</td><td>{{netto}} Kg</td></tr>
-
     </table>
 
+    <div class="note">Keterangan:<br>{{keterangan}}</div>
 
-    <div class="footer">
-        <div class="signature-block">
-            <div class="title">Sopir</div>
-            <div class="signature-line">( {{nama_sopir}} )</div>
-        </div>
-        <div class="signature-block">
-            <div class="title">Admin</div>
-            <div class="signature-line">( {{user}} )</div>
-        </div>
-    </div>
-
-    <div class="note">Keterangan: {{keterangan}}</div>
+<!-- Tabel Tanda Tangan -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 30px;">
+        <tr>
+            <td width="50%" align="center"><b>Sopir</b><br><br><br><br><br></td>
+            <td width="50%" align="center"><b>Admin</b><br><br><br><br><br></td>
+        </tr>
+        <tr>
+            <td width="50%" align="center">( {{nama_sopir}} )</td>
+            <td width="50%" align="center">( {{user}} )</td>
+        </tr>
+    </table>
 </body>
 </html>

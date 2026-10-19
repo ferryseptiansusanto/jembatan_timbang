@@ -349,28 +349,6 @@
       <string>Flow Control</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="btnRefresh">
-     <property name="geometry">
-      <rect>
-       <x>440</x>
-       <y>10</y>
-       <width>41</width>
-       <height>41</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>../resources/icon/refresh-icon-10846.png</normaloff>../resources/icon/refresh-icon-10846.png</iconset>
-     </property>
-    </widget>
    </widget>
   </widget>
  </widget>

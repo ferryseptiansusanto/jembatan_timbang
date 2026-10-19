@@ -1,9 +1,8 @@
 import re
-
+from modules.config import config
 class RegexSerialParser:
     def __init__(self, pattern=None):
-        # Gunakan pattern default jika tidak disediakan
-        self.regex = re.compile(pattern or r'^[A-Z]{2},[A-Z]{2},\+\d+(?:\.\d+)?[a-zA-Z]{2}$')
+        self.regex = re.compile(pattern)
 
     def clean(self, data):
         if isinstance(data, bytes):
@@ -15,18 +14,29 @@ class RegexSerialParser:
 
     def extract_weight(self, line):
         try:
-            line = self.clean(line)
-            match = re.search(r'([+-]?\d+(?:\.\d+)?)', line)
-            return float(match.group(1)) if match else None
+            line =self.clean(line)
+            # 1. Regex mencocokkan dan mengambil angkanya (misal dapat "000510")
+            match = re.search(self.regex, line)
+            if match:
+                raw_weight_str = match.group(1)
+
+                # 2. Logika Python untuk membalik string jika konfigurasi aktif
+                if hasattr(config, 'REVERSE_WEIGHT') and config.REVERSE_WEIGHT:
+                    raw_weight_str = raw_weight_str[::-1]  # "000510" otomatis jadi "015000"
+
+                return float(raw_weight_str)
+            return None
         except Exception as e:
             print("[ERROR] extract_weight:", e)
             return None
 
+
     def extract_unit(self, line):
         try:
             line = self.clean(line)
-            match = re.search(r'[a-zA-Z]+$', line)
-            return match.group(0) if match else None
+            # Regex kecil khusus untuk mengambil satuan (kg/t/ton) jika ada di belakang string
+            match = re.search(r'([a-zA-Z]{1,3})\s*$', line)
+            return match.group(1).lower() if match else "kg"
         except Exception as e:
             print("[ERROR] extract_unit:", e)
             return None

@@ -5,7 +5,9 @@ from PyQt5 import QtWidgets, QtCore
 from modules.Login.form_login import Ui_Form
 from modules.helper.db import execute_select
 
+import faulthandler
 
+faulthandler.enable()
 class LoginMain(QtWidgets.QWidget, Ui_Form):
     def __init__(self):
         super().__init__()
